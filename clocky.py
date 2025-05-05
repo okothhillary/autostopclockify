@@ -1,62 +1,67 @@
 import os
 import requests
 from datetime import datetime, timezone
-from dateutil.parser import isoparse  # ensure python-dateutil is installed
+from dateutil.parser import isoparse  # pip install python-dateutil
 
-API_KEY = os.getenv("CLOCKIFY_API_KEY")
-WORKSPACE_ID = os.getenv("WORKSPACE_ID")
-USER_ID = os.getenv("USER_ID")
+API_KEY        = os.getenv("CLOCKIFY_API_KEY")
+WORKSPACE_ID   = os.getenv("WORKSPACE_ID")
+USER_ID        = os.getenv("USER_ID")
+BASE_URL       = "https://api.clockify.me/api/v1"
+HEADERS        = {"X-Api-Key": API_KEY, "Content-Type": "application/json"}
 
-BASE_URL = "https://api.clockify.me/api/v1"
-
-headers = {
-    "X-Api-Key": API_KEY,
-    "Content-Type": "application/json"
-}
+def get_active_project_id():
+    """Fetches and returns the first active (non-archived) project in the workspace."""
+    url = f"{BASE_URL}/workspaces/{WORKSPACE_ID}/projects?archived=false"
+    resp = requests.get(url, headers=HEADERS)
+    if resp.status_code != 200:
+        print("⚠️ Failed to fetch active projects:", resp.text)
+        return None
+    projects = resp.json()
+    if not projects:
+        print("⚠️ No active projects found in workspace.")
+        return None
+    return projects[0]["id"]  # pick the first
 
 def stop_running_timer():
+    # 1) Get the currently running time entry
     url = f"{BASE_URL}/workspaces/{WORKSPACE_ID}/user/{USER_ID}/time-entries?in-progress=true"
-    response = requests.get(url, headers=headers)
-
-    if response.status_code != 200:
-        print("Failed to fetch running time entry.")
-        print(response.text)
+    resp = requests.get(url, headers=HEADERS)
+    if resp.status_code != 200:
+        print("❌ Failed to fetch running time entry:", resp.text)
         return
 
-    data = response.json()
-    if not data:
-        print("No running timer found.")
+    entries = resp.json()
+    if not entries:
+        print("ℹ️ No running timer found.")
         return
 
-    time_entry = data[0]
-    time_entry_id = time_entry['id']
-    
-    # Properly format the start time
-    start_time_raw = time_entry['timeInterval']['start']
-    start_time = isoparse(start_time_raw).strftime('%Y-%m-%dT%H:%M:%SZ')
+    entry = entries[0]
+    entry_id = entry["id"]
 
-    # Properly format the end time
-    end_time = datetime.now(timezone.utc).strftime('%Y-%m-%dT%H:%M:%SZ')
+    # 2) Reformat start & end times to "YYYY-MM-DDTHH:MM:SSZ"
+    start_raw = entry["timeInterval"]["start"]
+    start = isoparse(start_raw).strftime("%Y-%m-%dT%H:%M:%SZ")
+    end   = datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
 
-    project_id = time_entry.get('projectId')
+    # 3) Determine a valid projectId
+    project_id = entry.get("projectId")
+    if not project_id:
+        project_id = get_active_project_id()
+        if not project_id:
+            print("❌ Cannot stop timer: no projectId available or found.")
+            return
 
-    stop_payload = {
-        "start": start_time,
-        "end": end_time
-    }
+    # 4) Build payload and send the stop request
+    payload = {"start": start, "end": end, "projectId": project_id}
+    stop_url = f"{BASE_URL}/workspaces/{WORKSPACE_ID}/time-entries/{entry_id}"
+    stop_resp = requests.put(stop_url, headers=HEADERS, json=payload)
 
-    if project_id:
-        stop_payload["projectId"] = project_id
-
-    stop_url = f"{BASE_URL}/workspaces/{WORKSPACE_ID}/time-entries/{time_entry_id}"
-    stop_response = requests.put(stop_url, headers=headers, json=stop_payload)
-
-    if stop_response.status_code == 200:
-        print("Timer stopped successfully.")
+    if stop_resp.status_code == 200:
+        print("✅ Timer stopped successfully.")
     else:
-        print("Failed to stop the timer.")
-        print("Payload:", stop_payload)
-        print(stop_response.text)
+        print("❌ Failed to stop the timer.")
+        print("Payload:", payload)
+        print(stop_resp.text)
 
-# Call the function
-stop_running_timer()
+if __name__ == "__main__":
+    stop_running_timer()
