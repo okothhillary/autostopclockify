@@ -4,21 +4,36 @@ from datetime import datetime, timezone
 
 API_KEY      = os.getenv("CLOCKIFY_API_KEY")
 WORKSPACE_ID = os.getenv("WORKSPACE_ID")
-BASE_URL     = "https://api.clockify.me/api/v1"
-HEADERS      = {"X-Api-Key": API_KEY, "Content-Type": "application/json"}
+USER_ID      = os.getenv("USER_ID")
+
+BASE_URL = "https://api.clockify.me/api/v1"
+HEADERS  = {"X-Api-Key": API_KEY, "Content-Type": "application/json"}
 
 def stop_running_timer():
-    # Format end time exactly as Clockify expects: "YYYY-MM-DDTHH:MM:SSZ"
+    # 1) Find the in-progress entry
+    get_url = f"{BASE_URL}/workspaces/{WORKSPACE_ID}/user/{USER_ID}/time-entries?in-progress=true"
+    resp = requests.get(get_url, headers=HEADERS)
+    if resp.status_code != 200:
+        print("❌ Error fetching running entry:", resp.text)
+        return
+    entries = resp.json()
+    if not entries:
+        print("ℹ️ No running timer.")
+        return
+
+    entry_id = entries[0]["id"]
+
+    # 2) Format end time exactly as Clockify expects ("YYYY-MM-DDTHH:MM:SSZ")
     end_time = datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
 
-    # Call the built-in “endStarted” endpoint
-    url = f"{BASE_URL}/workspaces/{WORKSPACE_ID}/timeEntries/endStarted"
-    resp = requests.put(url, headers=HEADERS, json={"end": end_time})
+    # 3) Hit the CamelCase patch endpoint
+    stop_url = f"{BASE_URL}/workspaces/{WORKSPACE_ID}/timeEntries/{entry_id}/end"
+    stop_resp = requests.patch(stop_url, headers=HEADERS, json={"end": end_time})
 
-    if resp.status_code == 200:
+    if stop_resp.status_code == 200:
         print("✅ Timer stopped successfully.")
     else:
-        print("❌ Failed to stop the timer:", resp.text)
+        print("❌ Failed to stop the timer:", stop_resp.text)
 
 if __name__ == "__main__":
     stop_running_timer()
