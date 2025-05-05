@@ -35,16 +35,22 @@ def stop_running_timer():
     time_entry = data[0]
     time_entry_id = time_entry['id']
     start_time = time_entry['timeInterval']['start']
-
-    # Ensure both times are in the expected ISO format (ending in Z)
     end_time = datetime.now(timezone.utc).strftime('%Y-%m-%dT%H:%M:%SZ')
 
-    stop_url = f"{BASE_URL}/workspaces/{WORKSPACE_ID}/time-entries/{time_entry_id}"
+    # Get the projectId if available
+    project_id = time_entry.get("projectId")
+
+    # Prepare payload
     payload = {
         "start": start_time,
         "end": end_time
     }
 
+    if project_id:
+        payload["projectId"] = project_id
+
+    # Send request to stop the timer
+    stop_url = f"{BASE_URL}/workspaces/{WORKSPACE_ID}/time-entries/{time_entry_id}"
     stop_response = requests.put(stop_url, headers=headers, json=payload)
 
     if stop_response.status_code == 200:
