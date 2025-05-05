@@ -17,7 +17,10 @@ headers = {
 
 def stop_running_timer():
     # Get currently running time entry
-    response = requests.get(f"{BASE_URL}/workspaces/{WORKSPACE_ID}/user/{USER_ID}/time-entries?in-progress=true", headers=headers)
+    response = requests.get(
+        f"{BASE_URL}/workspaces/{WORKSPACE_ID}/user/{USER_ID}/time-entries?in-progress=true",
+        headers=headers
+    )
     
     if response.status_code != 200:
         print("Failed to fetch running time entry.")
@@ -29,11 +32,18 @@ def stop_running_timer():
         print("No running timer found.")
         return
 
-    time_entry_id = data[0]['id']
+    time_entry = data[0]
+    time_entry_id = time_entry['id']
+    start_time = time_entry['timeInterval']['start']
 
-    # Stop the timer by sending a PUT request
+    # Stop the timer by sending both start and end
     stop_url = f"{BASE_URL}/workspaces/{WORKSPACE_ID}/time-entries/{time_entry_id}"
-    stop_response = requests.put(stop_url, headers=headers, json={"end": datetime.now(timezone.utc).isoformat()})
+    payload = {
+        "start": start_time,
+        "end": datetime.now(timezone.utc).isoformat()
+    }
+
+    stop_response = requests.put(stop_url, headers=headers, json=payload)
 
     if stop_response.status_code == 200:
         print("Timer stopped successfully.")
