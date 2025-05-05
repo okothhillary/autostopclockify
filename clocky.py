@@ -36,11 +36,13 @@ def stop_running_timer():
     time_entry_id = time_entry['id']
     start_time = time_entry['timeInterval']['start']
 
-    # Stop the timer by sending both start and end
+    # Ensure both times are in the expected ISO format (ending in Z)
+    end_time = datetime.now(timezone.utc).strftime('%Y-%m-%dT%H:%M:%SZ')
+
     stop_url = f"{BASE_URL}/workspaces/{WORKSPACE_ID}/time-entries/{time_entry_id}"
     payload = {
         "start": start_time,
-        "end": datetime.now(timezone.utc).isoformat()
+        "end": end_time
     }
 
     stop_response = requests.put(stop_url, headers=headers, json=payload)
@@ -49,6 +51,7 @@ def stop_running_timer():
         print("Timer stopped successfully.")
     else:
         print("Failed to stop the timer.")
+        print("Payload:", payload)
         print(stop_response.text)
 
 # Call the function
