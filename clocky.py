@@ -9,7 +9,7 @@ USER_ID = os.getenv("USER_ID")
 
 BASE_URL = "https://api.clockify.me/api/v1"
 
-# Headers for all API requests
+# Headers for API requests
 headers = {
     "X-Api-Key": API_KEY,
     "Content-Type": "application/json"
@@ -17,10 +17,8 @@ headers = {
 
 def stop_running_timer():
     # Get currently running time entry
-    response = requests.get(
-        f"{BASE_URL}/workspaces/{WORKSPACE_ID}/user/{USER_ID}/time-entries?in-progress=true",
-        headers=headers
-    )
+    url = f"{BASE_URL}/workspaces/{WORKSPACE_ID}/user/{USER_ID}/time-entries?in-progress=true"
+    response = requests.get(url, headers=headers)
     
     if response.status_code != 200:
         print("Failed to fetch running time entry.")
@@ -35,30 +33,25 @@ def stop_running_timer():
     time_entry = data[0]
     time_entry_id = time_entry['id']
     start_time = time_entry['timeInterval']['start']
-    end_time = datetime.now(timezone.utc).strftime('%Y-%m-%dT%H:%M:%SZ')
+    project_id = time_entry.get('projectId')
 
-    # Get the projectId if available
-    project_id = time_entry.get("projectId")
-
-    # Prepare payload
-    payload = {
+    # Use ISO format compatible with Clockify API
+    stop_payload = {
         "start": start_time,
-        "end": end_time
+        "end": datetime.now(timezone.utc).isoformat()
     }
 
     if project_id:
-        payload["projectId"] = project_id
+        stop_payload["projectId"] = project_id
 
-    # Send request to stop the timer
     stop_url = f"{BASE_URL}/workspaces/{WORKSPACE_ID}/time-entries/{time_entry_id}"
-    stop_response = requests.put(stop_url, headers=headers, json=payload)
+    stop_response = requests.put(stop_url, headers=headers, json=stop_payload)
 
     if stop_response.status_code == 200:
         print("Timer stopped successfully.")
     else:
         print("Failed to stop the timer.")
-        print("Payload:", payload)
         print(stop_response.text)
 
-# Call the function
+# Run the function
 stop_running_timer()
