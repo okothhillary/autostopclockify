@@ -2,7 +2,7 @@ name: Stop Clockify Timer Daily
 
 on:
   schedule:
-    - cron: "0 23 * * *"  # Runs daily at 2:00 AM EAT, wueh!! mchawi
+    - cron: "0 19 * * *"  # Runs daily at 2:00 AM EAT, wueh!! mchawi
   workflow_dispatch:  # Allows for manual trigger of the action
 
 jobs:
