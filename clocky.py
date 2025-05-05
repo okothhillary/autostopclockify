@@ -1,25 +1,23 @@
 import os
 import requests
 from datetime import datetime, timezone
+from dateutil.parser import isoparse  # ensure python-dateutil is installed
 
-# Fetch API key, workspace, and user ID from environment variables
 API_KEY = os.getenv("CLOCKIFY_API_KEY")
 WORKSPACE_ID = os.getenv("WORKSPACE_ID")
 USER_ID = os.getenv("USER_ID")
 
 BASE_URL = "https://api.clockify.me/api/v1"
 
-# Headers for API requests
 headers = {
     "X-Api-Key": API_KEY,
     "Content-Type": "application/json"
 }
 
 def stop_running_timer():
-    # Get currently running time entry
     url = f"{BASE_URL}/workspaces/{WORKSPACE_ID}/user/{USER_ID}/time-entries?in-progress=true"
     response = requests.get(url, headers=headers)
-    
+
     if response.status_code != 200:
         print("Failed to fetch running time entry.")
         print(response.text)
@@ -32,13 +30,19 @@ def stop_running_timer():
 
     time_entry = data[0]
     time_entry_id = time_entry['id']
-    start_time = time_entry['timeInterval']['start']
+    
+    # Properly format the start time
+    start_time_raw = time_entry['timeInterval']['start']
+    start_time = isoparse(start_time_raw).strftime('%Y-%m-%dT%H:%M:%SZ')
+
+    # Properly format the end time
+    end_time = datetime.now(timezone.utc).strftime('%Y-%m-%dT%H:%M:%SZ')
+
     project_id = time_entry.get('projectId')
 
-    # Use ISO format compatible with Clockify API
     stop_payload = {
         "start": start_time,
-        "end": datetime.now(timezone.utc).isoformat()
+        "end": end_time
     }
 
     if project_id:
@@ -51,7 +55,8 @@ def stop_running_timer():
         print("Timer stopped successfully.")
     else:
         print("Failed to stop the timer.")
+        print("Payload:", stop_payload)
         print(stop_response.text)
 
-# Run the function
+# Call the function
 stop_running_timer()
