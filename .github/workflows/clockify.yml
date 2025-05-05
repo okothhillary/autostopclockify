@@ -2,12 +2,13 @@ name: Trials...
 
 on:
   schedule:
-    - cron: "0 19 * * *"  # Runs daily at 2:00 AM EAT, wueh!! mchawi
-  workflow_dispatch:  # Allows for manual trigger of the action
+    - cron: "0 19 * * *"  # Runs daily at 10 PM EAT
+  workflow_dispatch:      # Allows manual runs
 
 jobs:
   stop_timer:
     runs-on: ubuntu-latest
+
     steps:
       - name: Checkout code
         uses: actions/checkout@v2
@@ -20,12 +21,11 @@ jobs:
       - name: Install dependencies
         run: |
           python -m pip install --upgrade pip
-          pip install requests
+          pip install requests python-dateutil
 
       - name: Run the script to stop timer
         env:
           CLOCKIFY_API_KEY: ${{ secrets.CLOCKIFY_API_KEY }}
-          WORKSPACE_ID: ${{ secrets.WORKSPACE_ID }}
-          USER_ID: ${{ secrets.USER_ID }}
-        run: |
-          python clocky.py
+          WORKSPACE_ID:    ${{ secrets.WORKSPACE_ID }}
+          USER_ID:         ${{ secrets.USER_ID }}
+        run: python clocky.py
