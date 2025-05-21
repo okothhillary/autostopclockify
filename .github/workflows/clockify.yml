@@ -2,7 +2,7 @@ name: Trials...
 
 on:
   schedule:
-    - cron: "58 22 * * *"  # Runs daily at 2 AM EAT
+    - cron: "59 22 * * *"  # Runs daily at 2 AM EAT
   workflow_dispatch:      # Allows manual runs
 
 jobs:
