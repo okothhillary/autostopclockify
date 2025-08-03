@@ -14,7 +14,7 @@ def get_active_project_id():
     url = f"{BASE_URL}/workspaces/{WORKSPACE_ID}/projects?archived=false"
     r = requests.get(url, headers=HEADERS)
     if r.status_code != 200:
-        print("⚠️ Could not fetch active projects:", r.text)
+        print("Could not fetch active projects:", r.text)
         return None
     projs = r.json()
     return projs[0]["id"] if projs else None
@@ -24,7 +24,7 @@ def stop_running_timer():
     url = f"{BASE_URL}/workspaces/{WORKSPACE_ID}/user/{USER_ID}/time-entries?in-progress=true"
     r = requests.get(url, headers=HEADERS)
     if r.status_code != 200:
-        print("❌ Error fetching entry:", r.text); return
+        print("Error fetching entry:", r.text); return
     entries = r.json()
     if not entries:
         print("ℹ️ No running timer."); return
@@ -40,7 +40,7 @@ def stop_running_timer():
     # 3) Pick a valid projectId
     project_id = entry.get("projectId") or get_active_project_id()
     if not project_id:
-        print("❌ No valid project to assign."); return
+        print("No valid project to assign."); return
 
     # 4) Build payload & send PUT to the correct endpoint
     payload = {"start": start, "end": end, "projectId": project_id}
@@ -48,9 +48,9 @@ def stop_running_timer():
     stop_resp = requests.put(stop_url, headers=HEADERS, json=payload)
 
     if stop_resp.status_code == 200:
-        print("✅ Timer stopped successfully.")
+        print("Timer stopped successfully.")
     else:
-        print("❌ Failed to stop timer:")
+        print("Failed to stop timer:")
         print("Payload:", payload)
         print(stop_resp.status_code, stop_resp.text)
 
